@@ -9,8 +9,8 @@ import GridSizeSelector from "../components/GridSizeSelector";
 import Header from "../components/Header";
 
 const WRONG_PENALTY = 5;
-const BUZZ_WINDOW   = 7;
-const WRONG_FLASH   = 900; // ms card stays red
+const BUZZ_WINDOW   = 7;  // seconds AFTER audio ends
+const WRONG_FLASH   = 900;
 const GRID_COLS     = { 4: 2, 9: 3 };
 
 function shuffle(arr) {
@@ -43,24 +43,21 @@ export default function Home() {
   const [matched, setMatched]               = useState({});
   const [revealed, setRevealed]             = useState({});
 
-  // Listening state
-  const [activeCard, setActiveCard]         = useState(null); // card being listened to
-  const [isPlaying, setIsPlaying]           = useState(false); // audio currently playing
-  const [buzzWindow, setBuzzWindow]         = useState(0);    // seconds remaining
+  const [activeCard, setActiveCard]         = useState(null);
+  const [isPlaying, setIsPlaying]           = useState(false);
+  const [buzzWindow, setBuzzWindow]         = useState(0);  // only counts during waiting phase
 
-  // Feedback
-  const [wrongCard, setWrongCard]           = useState(null); // card flashing red
+  const [wrongCard, setWrongCard]           = useState(null);
   const [apiError, setApiError]             = useState(null);
 
-  // Scoring
   const [elapsed, setElapsed]               = useState(0);
   const [started, setStarted]               = useState(false);
   const [finished, setFinished]             = useState(false);
   const [wrongGuesses, setWrongGuesses]     = useState(0);
 
-  const audioRef     = useRef(null);
-  const gameTimerRef = useRef(null);
-  const buzzTimerRef = useRef(null);
+  const audioRef      = useRef(null);
+  const gameTimerRef  = useRef(null);
+  const buzzTimerRef  = useRef(null);
   const wrongTimerRef = useRef(null);
 
   const nameList = [...cards].sort((a, b) => a.name.localeCompare(b.name));
@@ -92,17 +89,13 @@ export default function Home() {
   }, []);
 
   const clearBuzzTimer = useCallback(() => {
-    if (buzzTimerRef.current) { clearInterval(buzzTimerRef.current); buzzTimerRef.current = null; }
+    if (buzzTimerRef.current) {
+      clearInterval(buzzTimerRef.current);
+      buzzTimerRef.current = null;
+    }
   }, []);
 
-  const resetListening = useCallback(() => {
-    stopAudio();
-    clearBuzzTimer();
-    setActiveCard(null);
-    setBuzzWindow(0);
-    setIsPlaying(false);
-  }, [stopAudio, clearBuzzTimer]);
-
+  // Start the 7-second window AFTER audio ends
   const startBuzzTimer = useCallback(() => {
     clearBuzzTimer();
     setBuzzWindow(BUZZ_WINDOW);
@@ -111,15 +104,23 @@ export default function Home() {
         if (prev <= 1) {
           clearInterval(buzzTimerRef.current);
           buzzTimerRef.current = null;
-          stopAudio();
+          // Time's up — reset everything
           setActiveCard(null);
-          setIsPlaying(false);
+          setBuzzWindow(0);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-  }, [clearBuzzTimer, stopAudio]);
+  }, [clearBuzzTimer]);
+
+  const resetListening = useCallback(() => {
+    stopAudio();
+    clearBuzzTimer();
+    setActiveCard(null);
+    setIsPlaying(false);
+    setBuzzWindow(0);
+  }, [stopAudio, clearBuzzTimer]);
 
   const handleCardClick = useCallback(async (charId) => {
     if (matched[charId] || wrongCard) return;
@@ -131,10 +132,13 @@ export default function Home() {
     const character = CHARACTERS.find(c => c.id === charId);
     if (!character) return;
 
+    // Stop any existing audio + buzz timer before starting fresh
+    clearBuzzTimer();
+    stopAudio();
+    setBuzzWindow(0);
+
     setActiveCard(charId);
     setIsPlaying(true);
-    startBuzzTimer();
-    stopAudio();
 
     try {
       const url = await fetchAudio(character.phrases[0], character.voiceId, character.emotion, character.speed);
@@ -143,13 +147,15 @@ export default function Home() {
       audio.play();
       audio.onended = () => {
         audioRef.current = null;
-        setIsPlaying(false); // audio done — focus shifts to panel
+        setIsPlaying(false);
+        // ← buzz timer starts HERE, after audio finishes
+        startBuzzTimer();
       };
     } catch (err) {
       setApiError(err.message);
       resetListening();
     }
-  }, [matched, wrongCard, activeCard, started, stopAudio, startBuzzTimer, resetListening]);
+  }, [matched, wrongCard, activeCard, started, stopAudio, clearBuzzTimer, startBuzzTimer, resetListening]);
 
   const handleNameClick = useCallback((nameId) => {
     if (!activeCard || matched[nameId] || wrongCard) return;
@@ -158,10 +164,10 @@ export default function Home() {
     const cardId = activeCard;
     const character = CHARACTERS.find(c => c.id === cardId);
 
-    // Stop audio immediately regardless of outcome
     stopAudio();
     clearBuzzTimer();
     setActiveCard(null);
+    setIsPlaying(false);
     setBuzzWindow(0);
 
     if (isCorrect) {
@@ -169,7 +175,6 @@ export default function Home() {
       setRevealed(r => ({ ...r, [cardId]: true }));
     } else {
       setWrongGuesses(w => w + 1);
-      // Flash the card red with +5s
       setWrongCard(cardId);
       if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
       wrongTimerRef.current = setTimeout(() => setWrongCard(null), WRONG_FLASH);
@@ -188,7 +193,7 @@ export default function Home() {
     setFinished(false); setApiError(null);
   }, [gridSize, resetListening]);
 
-  const buzzFill = activeCard ? (buzzWindow / BUZZ_WINDOW) * 100 : 0;
+  const buzzFill = (buzzWindow / BUZZ_WINDOW) * 100;
 
   return (
     <>

@@ -36,8 +36,8 @@
 
 /* ── CARD: DISABLED ── */
 .card-face.disabled {
-  opacity: 0.35;
-  filter: saturate(0.3);
+  opacity: 0.6;
+  filter: saturate(0.6);
   cursor: default !important;
   transform: none !important;
   box-shadow: 0 2px 0 rgba(0,0,0,0.1) !important;
