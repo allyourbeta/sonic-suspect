@@ -1,4 +1,18 @@
 /* styles/globals.css */
+/* ── CSS VARIABLES — change palette here only ── */
+:root {
+  --bg:       #FFF5FB;
+  --navy:     #1A1A40;
+  --card-1:   #FF4D9E; --shadow-1: #CC1A6E;
+  --card-2:   #FF9F1C; --shadow-2: #CC6600;
+  --card-3:   #2EC4B6; --shadow-3: #1A8A7A;
+  --card-4:   #FFBF00; --shadow-4: #CC8800;
+  --card-5:   #7B2FBE; --shadow-5: #4A1A8A;
+  --card-6:   #06D6A0; --shadow-6: #018A5E;
+  --correct:  #06D6A0;
+  --wrong:    #FF4D9E;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -7,9 +21,9 @@
 
 html, body {
   min-height: 100vh;
-  background: #0a0a0f;
-  color: #e0d8ff;
-  font-family: 'Courier New', Courier, monospace;
+  background: var(--bg);
+  color: var(--navy);
+  font-family: 'Nunito', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -29,12 +43,192 @@ html, body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes flipIn {
-  from { transform: rotateY(90deg); opacity: 0; }
-  to   { transform: rotateY(0deg); opacity: 1; }
+@keyframes rainbow {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
 }
 
-@keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
+/* ── CARD COLORS by index ── */
+.card-color-0 { background: var(--card-1); box-shadow: 0 6px 0 var(--shadow-1); }
+.card-color-1 { background: var(--card-2); box-shadow: 0 6px 0 var(--shadow-2); }
+.card-color-2 { background: var(--card-3); box-shadow: 0 6px 0 var(--shadow-3); }
+.card-color-3 { background: var(--card-4); box-shadow: 0 6px 0 var(--shadow-4); }
+.card-color-4 { background: var(--card-5); box-shadow: 0 6px 0 var(--shadow-5); }
+.card-color-5 { background: var(--card-6); box-shadow: 0 6px 0 var(--shadow-6); }
+
+.card-face-down {
+  border-radius: 20px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  border: 3px solid rgba(0,0,0,0.08);
+  transition: transform 0.15s;
+  user-select: none;
+}
+
+.card-face-down:hover { transform: translateY(-3px); }
+.card-face-down:active { transform: translateY(1px); }
+.card-face-down.selected { outline: 4px solid var(--navy); outline-offset: -2px; }
+
+.card-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: rgba(0,0,0,0.35);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.card-revealed {
+  border-radius: 20px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  background: white;
+  border: 3px solid var(--correct);
+  box-shadow: 0 6px 0 #ccc;
+}
+
+.sound-bars {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 28px;
+}
+
+.sound-bar {
+  width: 5px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 3px;
+  animation: soundbar 0.5s ease-in-out infinite alternate;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--navy);
+  padding: 0 28px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg,
+    var(--card-1), var(--card-2), var(--card-3),
+    var(--card-4), var(--card-5), var(--card-6),
+    var(--card-1));
+  background-size: 200%;
+  animation: rainbow 3s linear infinite;
+}
+
+.logo-text {
+  font-family: 'Fredoka One', cursive;
+  font-size: 26px;
+  color: white;
+}
+
+.logo-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  font-weight: 700;
+}
+
+.stat-value {
+  font-family: 'Fredoka One', cursive;
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* ── NAME PANEL ── */
+.name-panel {
+  background: white;
+  border: 2px solid var(--navy);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.1);
+}
+
+.name-panel-header {
+  background: var(--navy);
+  color: white;
+  padding: 10px 14px;
+  font-family: 'Fredoka One', cursive;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.name-item {
+  padding: 9px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  transition: background 0.1s;
+}
+
+.name-item:last-child { border-bottom: none; }
+.name-item:hover { background: #FFF0FA; }
+.name-item.selected { background: var(--card-4); }
+.name-item.matched {
+  opacity: 0.4;
+  text-decoration: line-through;
+  cursor: default;
+}
+.name-item.matched:hover { background: white; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 28px;
+  border-radius: 50px;
+  font-family: 'Fredoka One', cursive;
+  font-size: 18px;
+  z-index: 100;
+  animation: pop 0.3s ease forwards;
+  white-space: nowrap;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+  color: white;
+}
+
+.toast.correct { background: var(--correct); }
+.toast.wrong   { background: var(--wrong); }
+
+/* ── RESET BUTTON ── */
+.reset-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.6);
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.reset-btn:hover {
+  background: rgba(255,255,255,0.18);
+  color: white;
 }
