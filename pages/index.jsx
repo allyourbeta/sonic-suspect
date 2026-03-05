@@ -413,6 +413,7 @@ export default function Home() {
 
   // ── Handle card click ──────────────────────────────────────────────────────
   const handleCardClick = useCallback((charId) => {
+    if (playing) return;
     if (matched[charId]) return;
 
     // Toggle selection
