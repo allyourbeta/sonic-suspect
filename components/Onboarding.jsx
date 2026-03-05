@@ -2,7 +2,7 @@ export default function Onboarding({ onStart }) {
   return (
     <div className="onboarding-overlay">
       <div className="onboarding-card">
-        <div style={{ fontSize: 56 }}>🎭</div>
+        <div style={{ fontSize: 60 }}>🎭</div>
         <div className="onboarding-title">Think you know a voice?</div>
         <div className="onboarding-steps">
           {[
