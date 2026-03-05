@@ -232,3 +232,13 @@ html, body {
   background: rgba(255,255,255,0.18);
   color: white;
 }
+
+/* ── NAME PANEL URGENCY PULSE ── */
+@keyframes urgentPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.6; }
+}
+
+.name-panel-header-urgent {
+  animation: urgentPulse 0.8s ease-in-out infinite;
+}

@@ -19,11 +19,20 @@ function NameTag({ character, isMatched, isSelected, onClick }) {
   );
 }
 
-export default function NamePanel({ characters, matched, selectedName, onNameClick }) {
+export default function NamePanel({ characters, matched, selectedName, selectedCard, onNameClick }) {
+  const urgent = selectedCard !== null;
   return (
     <div style={{ width: 230, flexShrink: 0, background: "white", borderRadius: 16, overflow: "hidden", position: "sticky", top: 20, boxShadow: "0 4px 0 var(--shadow-5)" }}>
-      <div style={{ background: "var(--navy)", padding: "10px 14px", color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-        Who do you hear?
+      <div
+        className={urgent ? "name-panel-header-urgent" : ""}
+        style={{
+          background: urgent ? "var(--wrong)" : "var(--navy)",
+          padding: "10px 14px", color: "white", fontSize: 10, fontWeight: 800,
+          letterSpacing: "0.1em", textTransform: "uppercase",
+          fontFamily: "'Fredoka One', cursive",
+        }}
+      >
+        {urgent ? "\ud83d\udc47 NOW PICK A NAME" : "WHO DO YOU HEAR?"}
       </div>
       <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 4 }}>
         {characters.map(character => (
