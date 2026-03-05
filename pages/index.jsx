@@ -37,7 +37,7 @@ async function fetchAudio(text, voiceId, emotion, speed) {
 
 export default function Home() {
   const [gridSize, setGridSize]             = useState(9);
-  const [cards, setCards]                   = useState(() => shuffle(CHARACTERS).slice(0, 9));
+  const [cards, setCards]                   = useState(CHARACTERS.slice(0, 9));
   const [showOnboarding, setShowOnboarding] = useState(true);
 
   const [matched, setMatched]               = useState({});
@@ -78,6 +78,11 @@ export default function Home() {
       clearInterval(gameTimerRef.current);
     }
   }, [matched, started, cards.length]);
+
+  // Initial shuffle (deferred to avoid hydration mismatch)
+  useEffect(() => {
+    setCards(shuffle(CHARACTERS).slice(0, gridSize));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stopAudio = useCallback(() => {
     if (audioRef.current) {
@@ -144,13 +149,23 @@ export default function Home() {
       const url = await fetchAudio(character.phrases[0], character.voiceId, character.emotion, character.speed);
       const audio = new Audio(url);
       audioRef.current = audio;
-      audio.play();
+      audio.play().catch(() => {
+        // Play failed (e.g. headless browser) — treat as instant end
+        audioRef.current = null;
+        setIsPlaying(false);
+        startBuzzTimer();
+      });
       audio.onended = () => {
         audioRef.current = null;
         setIsPlaying(false);
-        // ← buzz timer starts HERE, after audio finishes
         startBuzzTimer();
       };
+      // Fallback: if audio is very short and onended doesn't fire within 2s, move on
+      audio.addEventListener('error', () => {
+        audioRef.current = null;
+        setIsPlaying(false);
+        startBuzzTimer();
+      });
     } catch (err) {
       setApiError(err.message);
       resetListening();
