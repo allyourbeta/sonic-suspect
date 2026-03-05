@@ -7,6 +7,7 @@ import WinScreen from "../components/WinScreen";
 import Onboarding from "../components/Onboarding";
 import GridSizeSelector from "../components/GridSizeSelector";
 import Header from "../components/Header";
+import { playCelebration } from "../lib/celebration";
 
 const WRONG_PENALTY = 5;
 const BUZZ_WINDOW   = 7;  // seconds AFTER audio ends
@@ -53,6 +54,7 @@ export default function Home() {
   const [elapsed, setElapsed]               = useState(0);
   const [started, setStarted]               = useState(false);
   const [finished, setFinished]             = useState(false);
+  const [celebrating, setCelebrating]        = useState(false);
   const [wrongGuesses, setWrongGuesses]     = useState(0);
 
   const audioRef      = useRef(null);
@@ -71,11 +73,37 @@ export default function Home() {
     return () => clearInterval(gameTimerRef.current);
   }, [started, finished]);
 
-  // Win detection
+  // Win detection — auto-complete at n-1, celebrate before win screen
   useEffect(() => {
-    if (started && Object.keys(matched).length === cards.length) {
-      setFinished(true);
+    const matchedCount = Object.keys(matched).length;
+    if (!started || matchedCount === 0) return;
+
+    // Auto-complete: one card left — reveal it immediately by elimination
+    if (matchedCount === cards.length - 1) {
+      const lastCard = cards.find(c => !matched[c.id]);
+      if (lastCard) {
+        setTimeout(() => {
+          setMatched(m => ({ ...m, [lastCard.id]: true }));
+          setRevealed(r => ({ ...r, [lastCard.id]: true }));
+        }, 400);
+      }
+      return;
+    }
+
+    // All matched — stop audio, play fanfare, then show win screen
+    if (matchedCount === cards.length) {
+      stopAudio();
+      clearBuzzTimer();
+      setActiveCard(null);
+      setIsPlaying(false);
+      setBuzzWindow(0);
       clearInterval(gameTimerRef.current);
+      setCelebrating(true);
+      playCelebration();
+      setTimeout(() => {
+        setCelebrating(false);
+        setFinished(true);
+      }, 1800);
     }
   }, [matched, started, cards.length]);
 
@@ -205,7 +233,7 @@ export default function Home() {
     setCards(shuffle(CHARACTERS).slice(0, size));
     setMatched({}); setRevealed({}); setWrongCard(null);
     setWrongGuesses(0); setElapsed(0); setStarted(false);
-    setFinished(false); setApiError(null);
+    setFinished(false); setCelebrating(false); setApiError(null);
   }, [gridSize, resetListening]);
 
   const buzzFill = (buzzWindow / BUZZ_WINDOW) * 100;
@@ -235,7 +263,7 @@ export default function Home() {
         <GridSizeSelector gridSize={gridSize} onSelect={(size) => handleReset(size)} />
 
         <div className="main-layout">
-          <div className="card-grid"
+          <div className={`card-grid${celebrating ? ' celebrating' : ''}`}
             style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 220px))` }}>
             {cards.map((character, i) => (
               <Card

@@ -109,3 +109,12 @@
   .name-chips { display: none !important; }
   .name-panel { display: flex !important; }
 }
+
+/* ── CELEBRATION ── */
+.card-grid.celebrating .card-revealed {
+  animation: celebPulse 0.4s ease-in-out infinite alternate;
+}
+@keyframes celebPulse {
+  from { transform: scale(1);    box-shadow: 0 4px 0 #0284C7; }
+  to   { transform: scale(1.04); box-shadow: 0 6px 20px rgba(2,132,199,0.5); }
+}
