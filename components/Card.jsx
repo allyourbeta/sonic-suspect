@@ -18,6 +18,7 @@ function Avatar({ name, size }) {
 }
 
 export default function Card({ character, isRevealed, isPlaying, isSelected, isMatched, onClick, colorIndex }) {
+  // Only show character identity after confirmed match
   if (isRevealed) {
     return (
       <div style={{ width: "100%" }}>
@@ -44,12 +45,12 @@ export default function Card({ character, isRevealed, isPlaying, isSelected, isM
           </div>
         ) : isSelected ? (
           <>
-            <div className="card-emoji">{character.emoji}</div>
+            <div className="card-emoji" style={{ opacity: 0.4 }}>🎧</div>
             <div className="card-hint-pick">Pick a name →</div>
           </>
         ) : (
           <>
-            <div className="card-emoji">{character.emoji}</div>
+            <div className="card-emoji" style={{ opacity: 0.4 }}>🎧</div>
             <div className="card-hint">Tap to hear</div>
           </>
         )}
