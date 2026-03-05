@@ -1,25 +1,33 @@
-export default function NamePanel({ characters, matched, activeCard, onNameClick }) {
-  // Panel is "live" when a card is active and waiting for a name pick
-  const isLive = activeCard !== null;
+// NamePanel
+// - No active card:    all badges dimmed, not clickable
+// - Active + playing:  badges available (pre-guess allowed) but NOT highlighted
+// - Active + waiting:  badges highlighted — visual focus shifts here
+
+export default function NamePanel({ characters, matched, activeCard, isPlaying, onNameClick }) {
+  const hasActive  = activeCard !== null;
+  const isWaiting  = hasActive && !isPlaying; // audio done, awaiting pick
 
   return (
     <>
       {/* Desktop — badge list */}
       <div className="name-panel">
         {characters.map(c => {
-          const isMatched = !!matched[c.id];
+          const isMatched   = !!matched[c.id];
+          const canClick    = hasActive && !isMatched;
+          const badgeClass  = isMatched   ? "matched"
+                            : isWaiting   ? "live waiting"
+                            : hasActive   ? "live"
+                            : "";          // idle — dimmed via CSS
+
           return (
-            <div
-              key={c.id}
-              className={`badge ${isMatched ? "matched" : ""} ${isLive && !isMatched ? "live" : ""}`}
-              onClick={isMatched || !isLive ? undefined : () => onNameClick(c.id)}
-            >
+            <div key={c.id}
+              className={`badge ${badgeClass}`}
+              onClick={canClick ? () => onNameClick(c.id) : undefined}>
               <span className="badge-em">{c.emoji}</span>
               <span className="badge-nm">{c.name}</span>
               {isMatched
                 ? <span className="badge-check">✓</span>
-                : <span className="badge-arr">›</span>
-              }
+                : <span className="badge-arr">›</span>}
             </div>
           );
         })}
@@ -28,16 +36,20 @@ export default function NamePanel({ characters, matched, activeCard, onNameClick
       {/* Mobile — chips */}
       <div className="name-chips">
         {characters.map(c => {
-          const isMatched = !!matched[c.id];
+          const isMatched  = !!matched[c.id];
+          const canClick   = hasActive && !isMatched;
+          const chipClass  = isMatched  ? "matched"
+                           : isWaiting  ? "live waiting"
+                           : hasActive  ? "live"
+                           : "";
+
           return (
-            <div
-              key={c.id}
-              className={`chip ${isMatched ? "matched" : ""} ${isLive && !isMatched ? "live" : ""}`}
-              onClick={isMatched || !isLive ? undefined : () => onNameClick(c.id)}
-            >
+            <div key={c.id}
+              className={`chip ${chipClass}`}
+              onClick={canClick ? () => onNameClick(c.id) : undefined}>
               <span>{c.emoji}</span>
               <span>{c.name}</span>
-              {isMatched && <span style={{ color: "var(--correct)", fontWeight: 900 }}>✓</span>}
+              {isMatched && <span style={{ color:"var(--correct)", fontWeight:900 }}>✓</span>}
             </div>
           );
         })}

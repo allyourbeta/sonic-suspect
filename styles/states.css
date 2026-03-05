@@ -1,0 +1,111 @@
+
+/* ── CARD: ACTIVE PLAYING (sound bars, buzz bar) ── */
+.card-face.active-playing {
+  border-color: rgba(255,255,255,0.9) !important;
+  box-shadow: 0 0 0 3px var(--amber), 0 4px 0 var(--amber-dark) !important;
+  transform: translateY(-3px);
+  background: var(--navy) !important;
+}
+
+/* ── CARD: ACTIVE WAITING (audio done, pick a name) ── */
+.card-face.active-waiting {
+  border-color: rgba(255,255,255,0.9) !important;
+  box-shadow: 0 0 0 3px var(--amber), 0 4px 0 var(--amber-dark) !important;
+  transform: translateY(-3px);
+  animation: pulseAmber 1.4s ease-in-out infinite;
+}
+
+@keyframes pulseAmber {
+  0%, 100% { box-shadow: 0 0 0 3px var(--amber), 0 4px 0 var(--amber-dark); }
+  50%       { box-shadow: 0 0 0 6px var(--amber-mid), 0 4px 0 var(--amber-dark); }
+}
+
+/* ── CARD: WRONG FLASH ── */
+.card-face.card-wrong {
+  background: var(--wrong) !important;
+  box-shadow: 0 4px 0 #B91C1C !important;
+  border-color: transparent !important;
+  transform: translateY(-3px);
+  display: flex; align-items: center; justify-content: center;
+}
+.card-wrong-label {
+  font-size: 32px; font-weight: 900; color: #fff;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* ── CARD: DISABLED ── */
+.card-face.disabled {
+  opacity: 0.35;
+  filter: saturate(0.3);
+  cursor: default !important;
+  transform: none !important;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.1) !important;
+}
+
+/* ── BUZZ WINDOW PROGRESS BAR ── */
+.buzz-bar-track {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 5px; background: rgba(0,0,0,0.15);
+  border-radius: 0 0 14px 14px; overflow: hidden;
+}
+.buzz-bar-fill {
+  height: 100%; background: rgba(255,255,255,0.85);
+  border-radius: 0 0 14px 14px;
+}
+
+/* ── NAME PANEL: IDLE (no active card) ── */
+.badge:not(.matched):not(.live) {
+  opacity: 0.38;
+  cursor: default;
+  pointer-events: none;
+}
+.chip:not(.matched):not(.live) {
+  opacity: 0.38;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ── NAME PANEL: LIVE (pre-guess allowed, audio playing) ── */
+.badge.live { cursor: pointer; }
+.badge.live:hover {
+  border-color: var(--amber); border-left-color: var(--amber);
+  background: var(--amber-light); transform: translateX(3px);
+}
+.badge.live:hover .badge-arr { color: var(--amber); }
+
+.chip.live { cursor: pointer; }
+.chip.live:hover { border-color: var(--amber); background: var(--amber-light); }
+
+/* ── NAME PANEL: WAITING (audio done, focus here) ── */
+.badge.waiting {
+  border-left-color: var(--amber) !important;
+  background: var(--amber-light);
+}
+.badge.waiting .badge-arr { color: var(--amber); }
+.badge.waiting:hover {
+  background: #FDE8C0;
+  transform: translateX(3px);
+}
+
+.chip.waiting {
+  border-color: var(--amber);
+  background: var(--amber-light);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 767px) {
+  .header { padding: 0 16px; height: 60px; }
+  .stat-time, .stat-wrong { display: none; }
+  .logo-name { font-size: 18px; }
+  .main-layout { flex-direction: column; }
+  .name-panel  { display: none !important; }
+  .name-chips  { display: flex !important; }
+  .content-area { padding: 20px 16px 40px; }
+  .onboarding-card, .win-card { padding: 36px 24px; }
+  .tog { padding: 9px 24px; font-size: 15px; }
+}
+@media (min-width: 768px) {
+  .name-chips { display: none !important; }
+  .name-panel { display: flex !important; }
+}
