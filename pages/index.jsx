@@ -7,7 +7,7 @@ import WinScreen from "../components/WinScreen";
 import Onboarding from "../components/Onboarding";
 import GridSizeSelector from "../components/GridSizeSelector";
 
-const WRONG_PENALTY = 10;
+const WRONG_PENALTY = 5;
 const GRID_COLS = { 4: 2, 9: 3 };
 
 function shuffle(arr) {
@@ -19,7 +19,7 @@ function shuffle(arr) {
   return a;
 }
 
-function formatTime(s) {
+function fmt(s) {
   return `${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;
 }
 
@@ -37,10 +37,9 @@ async function fetchAudio(text, voiceId, emotion, speed) {
 }
 
 export default function Home() {
-  const [gridSize, setGridSize] = useState(9);
+  const [gridSize, setGridSize]         = useState(9);
+  const [cards, setCards]               = useState(() => shuffle(CHARACTERS).slice(0, 9));
   const [showOnboarding, setShowOnboarding] = useState(true);
-  const [cards, setCards] = useState(CHARACTERS.slice(0, 9));
-  useEffect(() => { setCards(shuffle(CHARACTERS).slice(0, gridSize)); }, []);
   const nameList = [...cards].sort((a, b) => a.name.localeCompare(b.name));
   const gridCols = GRID_COLS[gridSize] ?? 3;
 
@@ -85,11 +84,7 @@ export default function Home() {
     setPlaying(charId);
     setApiError(null);
     try {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        URL.revokeObjectURL(audioRef.current.src);
-        audioRef.current = null;
-      }
+      if (audioRef.current) { audioRef.current.pause(); URL.revokeObjectURL(audioRef.current.src); audioRef.current = null; }
       const url = await fetchAudio(phrase, character.voiceId, character.emotion, character.speed);
       const audio = new Audio(url);
       audioRef.current = audio;
@@ -125,11 +120,11 @@ export default function Home() {
       setFeedback({ type: "correct", msg: `✓ ${character.name}!` });
     } else {
       setWrongGuesses(w => w + 1);
-      setFeedback({ type: "wrong", msg: "✗ Not quite — try again!" });
+      setFeedback({ type: "wrong", msg: `+${WRONG_PENALTY} seconds ⚡` });
     }
     setSelectedCard(null);
     setSelectedName(null);
-    feedbackRef.current = setTimeout(() => setFeedback(null), 1600);
+    feedbackRef.current = setTimeout(() => setFeedback(null), 1800);
   }, [selectedCard, selectedName]);
 
   const handleReset = (newSize) => {
@@ -146,34 +141,32 @@ export default function Home() {
 
   const score = elapsed + wrongGuesses * WRONG_PENALTY;
   const matchedCount = Object.keys(matched).length;
-  const gridStyle = {
-    gridTemplateColumns: `repeat(${gridCols}, minmax(0, var(--max-card-size)))`,
-  };
 
   return (
     <>
       <Head>
         <title>Sonic Suspect — A Cartesia Voice Game</title>
-        <meta name="description" content="A voice memory game powered by Cartesia Sonic-3" />
+        <meta name="description" content="A voice matching game powered by Cartesia Sonic-3" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
+      {/* HEADER */}
       <div className="header">
         <div>
-          <div className="logo-text">🎭 Sonic Suspect</div>
-          <div className="logo-sub">powered by <a href="https://cartesia.ai" target="_blank" rel="noreferrer" style={{ color: "#FF9F1C", textDecoration: "none" }}>Cartesia Sonic‑3</a></div>
+          <div className="logo-name">🎭 Sonic Suspect</div>
+          <div className="logo-sub">powered by <a href="https://cartesia.ai" target="_blank" rel="noreferrer">Cartesia Sonic‑3</a></div>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div className="header-right">
           {[
-            { label: "TIME",  value: formatTime(elapsed), color: "#60CFFF", cls: "stat-pill stat-pill-time" },
-            { label: "WRONG", value: wrongGuesses, sub: `×${WRONG_PENALTY}s`, color: "#FF6B6B", cls: "stat-pill stat-pill-wrong" },
-            { label: "SCORE", value: formatTime(score), color: "#FFBF00", cls: "stat-pill" },
-            { label: "FOUND", value: `${matchedCount}`, sub: `/${cards.length}`, color: "#22C55E", cls: "stat-pill" },
-          ].map(({ label, value, sub, color, cls }) => (
-            <div key={label} className={cls}>
-              <div className="stat-label">{label}</div>
-              <div className="stat-value" style={{ color }}>
-                {value}{sub && <span className="stat-sub">{sub}</span>}
+            { lbl: "TIME",  val: fmt(elapsed),     color: "#0891B2", cls: "stat stat-time" },
+            { lbl: "WRONG", val: wrongGuesses, sub: `×${WRONG_PENALTY}s`, color: "var(--wrong)", cls: "stat stat-wrong" },
+            { lbl: "SCORE", val: fmt(score),        color: "var(--amber)", cls: "stat" },
+            { lbl: "FOUND", val: matchedCount, sub: `/${cards.length}`,   color: "var(--correct)", cls: "stat" },
+          ].map(({ lbl, val, sub, color, cls }) => (
+            <div key={lbl} className={cls}>
+              <div className="stat-lbl">{lbl}</div>
+              <div className="stat-val" style={{ color }}>
+                {val}{sub && <span className="stat-sub">{sub}</span>}
               </div>
             </div>
           ))}
@@ -181,28 +174,20 @@ export default function Home() {
         </div>
       </div>
 
-      <GridSizeSelector gridSize={gridSize} onSelect={(size) => handleReset(size)} />
-
       <div className="content-area">
         {apiError && (
           <div className="api-error">
             <span>⚠ {apiError}</span>
-            <button onClick={() => setApiError(null)} style={{ background: "none", border: "none", color: "var(--wrong)", cursor: "pointer", fontSize: 16 }}>×</button>
+            <button onClick={() => setApiError(null)} style={{ background: "none", border: "none", color: "var(--wrong)", cursor: "pointer", fontSize: 18 }}>×</button>
           </div>
         )}
 
-        {!started && !showOnboarding && (
-          <div className="instructions">
-            🎧 Tap a card to hear a mystery voice · Then pick the matching name · Wrong guess = +10s
-          </div>
-        )}
+        {feedback && <div className={`toast ${feedback.type}`}>{feedback.msg}</div>}
 
-        {feedback && (
-          <div className={`toast ${feedback.type}`}>{feedback.msg}</div>
-        )}
+        <GridSizeSelector gridSize={gridSize} onSelect={(size) => handleReset(size)} />
 
         <div className="main-layout">
-          <div className="card-grid" style={gridStyle}>
+          <div className="card-grid" style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 220px))` }}>
             {cards.map((character, i) => (
               <Card
                 key={character.id}
@@ -216,7 +201,6 @@ export default function Home() {
               />
             ))}
           </div>
-
           <NamePanel
             characters={nameList}
             matched={matched}
@@ -227,13 +211,8 @@ export default function Home() {
         </div>
       </div>
 
-      {finished && (
-        <WinScreen elapsed={elapsed} wrongGuesses={wrongGuesses} onPlayAgain={() => handleReset()} />
-      )}
-
-      {showOnboarding && !started && (
-        <Onboarding onStart={() => setShowOnboarding(false)} />
-      )}
+      {finished && <WinScreen elapsed={elapsed} wrongGuesses={wrongGuesses} onPlayAgain={() => handleReset()} />}
+      {showOnboarding && <Onboarding onStart={() => setShowOnboarding(false)} />}
     </>
   );
 }
