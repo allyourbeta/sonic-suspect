@@ -41,8 +41,7 @@ export default function Home() {
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [cards, setCards] = useState(CHARACTERS);
   useEffect(() => { setCards(shuffle(CHARACTERS).slice(0, gridSize)); }, []);
-  const activeIds = new Set(cards.map(c => c.id));
-  const nameList = [...CHARACTERS].filter(c => activeIds.has(c.id)).sort((a, b) => a.name.localeCompare(b.name));
+  const nameList = [...cards].sort((a, b) => a.name.localeCompare(b.name));
   const gridCols = GRID_COLS[gridSize] ?? 4;
 
   const [revealed, setRevealed]         = useState({});
@@ -70,11 +69,11 @@ export default function Home() {
   }, [started, finished]);
 
   useEffect(() => {
-    if (started && Object.keys(matched).length === gridSize) {
+    if (started && Object.keys(matched).length === cards.length) {
       setFinished(true);
       clearInterval(timerRef.current);
     }
-  }, [matched, started, gridSize]);
+  }, [matched, started, cards.length]);
 
   const playCard = useCallback(async (charId) => {
     if (playing) return;
@@ -143,7 +142,6 @@ export default function Home() {
     setRevealed({}); setPlaying(null); setSelectedCard(null); setSelectedName(null);
     setMatched({}); setWrongGuesses(0); setElapsed(0); setStarted(false);
     setFinished(false); setFeedback(null); setPhraseIndex({}); setApiError(null);
-    setShowOnboarding(true);
   };
 
   const score = elapsed + wrongGuesses * WRONG_PENALTY;
@@ -167,7 +165,7 @@ export default function Home() {
             { label: "TIME",  value: formatTime(elapsed), color: "#60CFFF" },
             { label: "WRONG", value: wrongGuesses, sub: `×${WRONG_PENALTY}s`, color: "#FF6B6B" },
             { label: "SCORE", value: formatTime(score), color: "#FFBF00" },
-            { label: "FOUND", value: `${matchedCount}`, sub: `/${gridSize}`, color: "#06D6A0" },
+            { label: "FOUND", value: `${matchedCount}`, sub: `/${cards.length}`, color: "#06D6A0" },
           ].map(({ label, value, sub, color }) => (
             <div key={label} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 50, padding: "5px 14px", textAlign: "center", minWidth: 72 }}>
               <div style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 800 }}>{label}</div>
