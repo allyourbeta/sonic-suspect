@@ -1,16 +1,18 @@
-export default function NamePanel({ characters, matched, selectedName, selectedCard, onNameClick }) {
+export default function NamePanel({ characters, matched, activeCard, onNameClick }) {
+  // Panel is "live" when a card is active and waiting for a name pick
+  const isLive = activeCard !== null;
+
   return (
     <>
       {/* Desktop — badge list */}
       <div className="name-panel">
         {characters.map(c => {
           const isMatched = !!matched[c.id];
-          const isActive  = selectedName === c.id;
           return (
             <div
               key={c.id}
-              className={`badge ${isMatched ? "matched" : ""} ${isActive ? "active" : ""}`}
-              onClick={isMatched ? undefined : () => onNameClick(c.id)}
+              className={`badge ${isMatched ? "matched" : ""} ${isLive && !isMatched ? "live" : ""}`}
+              onClick={isMatched || !isLive ? undefined : () => onNameClick(c.id)}
             >
               <span className="badge-em">{c.emoji}</span>
               <span className="badge-nm">{c.name}</span>
@@ -27,12 +29,11 @@ export default function NamePanel({ characters, matched, selectedName, selectedC
       <div className="name-chips">
         {characters.map(c => {
           const isMatched = !!matched[c.id];
-          const isActive  = selectedName === c.id;
           return (
             <div
               key={c.id}
-              className={`chip ${isMatched ? "matched" : ""} ${isActive ? "active" : ""}`}
-              onClick={isMatched ? undefined : () => onNameClick(c.id)}
+              className={`chip ${isMatched ? "matched" : ""} ${isLive && !isMatched ? "live" : ""}`}
+              onClick={isMatched || !isLive ? undefined : () => onNameClick(c.id)}
             >
               <span>{c.emoji}</span>
               <span>{c.name}</span>

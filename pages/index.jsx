@@ -6,9 +6,11 @@ import NamePanel from "../components/NamePanel";
 import WinScreen from "../components/WinScreen";
 import Onboarding from "../components/Onboarding";
 import GridSizeSelector from "../components/GridSizeSelector";
+import Header from "../components/Header";
 
 const WRONG_PENALTY = 5;
-const GRID_COLS = { 4: 2, 9: 3 };
+const BUZZ_WINDOW   = 7;
+const GRID_COLS     = { 4: 2, 9: 3 };
 
 function shuffle(arr) {
   const a = [...arr];
@@ -17,10 +19,6 @@ function shuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
-}
-
-function fmt(s) {
-  return `${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;
 }
 
 async function fetchAudio(text, voiceId, emotion, speed) {
@@ -37,110 +35,140 @@ async function fetchAudio(text, voiceId, emotion, speed) {
 }
 
 export default function Home() {
-  const [gridSize, setGridSize]         = useState(9);
-  const [cards, setCards]               = useState(() => shuffle(CHARACTERS).slice(0, 9));
+  const [gridSize, setGridSize]             = useState(9);
+  const [cards, setCards]                   = useState(() => shuffle(CHARACTERS).slice(0, 9));
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const [matched, setMatched]               = useState({});
+  const [revealed, setRevealed]             = useState({});
+  const [activeCard, setActiveCard]         = useState(null);
+  const [buzzWindow, setBuzzWindow]         = useState(0);
+  const [shakingCard, setShakingCard]       = useState(null);
+  const [feedback, setFeedback]             = useState(null);
+  const [apiError, setApiError]             = useState(null);
+  const [elapsed, setElapsed]               = useState(0);
+  const [started, setStarted]               = useState(false);
+  const [finished, setFinished]             = useState(false);
+  const [wrongGuesses, setWrongGuesses]     = useState(0);
+
+  const audioRef     = useRef(null);
+  const gameTimerRef = useRef(null);
+  const buzzTimerRef = useRef(null);
+  const feedbackRef  = useRef(null);
+
   const nameList = [...cards].sort((a, b) => a.name.localeCompare(b.name));
   const gridCols = GRID_COLS[gridSize] ?? 3;
 
-  const [revealed, setRevealed]         = useState({});
-  const [playing, setPlaying]           = useState(null);
-  const [selectedCard, setSelectedCard] = useState(null);
-  const [selectedName, setSelectedName] = useState(null);
-  const [matched, setMatched]           = useState({});
-  const [wrongGuesses, setWrongGuesses] = useState(0);
-  const [elapsed, setElapsed]           = useState(0);
-  const [started, setStarted]           = useState(false);
-  const [finished, setFinished]         = useState(false);
-  const [feedback, setFeedback]         = useState(null);
-  const [phraseIndex, setPhraseIndex]   = useState({});
-  const [apiError, setApiError]         = useState(null);
-
-  const audioRef    = useRef(null);
-  const timerRef    = useRef(null);
-  const feedbackRef = useRef(null);
-
+  // Game clock
   useEffect(() => {
     if (started && !finished) {
-      timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+      gameTimerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
     }
-    return () => clearInterval(timerRef.current);
+    return () => clearInterval(gameTimerRef.current);
   }, [started, finished]);
 
+  // Win detection
   useEffect(() => {
     if (started && Object.keys(matched).length === cards.length) {
       setFinished(true);
-      clearInterval(timerRef.current);
+      clearInterval(gameTimerRef.current);
     }
   }, [matched, started, cards.length]);
 
-  const playCard = useCallback(async (charId) => {
-    if (playing) return;
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      try { URL.revokeObjectURL(audioRef.current.src); } catch (_) {}
+      audioRef.current = null;
+    }
+  }, []);
+
+  const clearBuzzTimer = useCallback(() => {
+    if (buzzTimerRef.current) { clearInterval(buzzTimerRef.current); buzzTimerRef.current = null; }
+  }, []);
+
+  const resetListening = useCallback(() => {
+    stopAudio();
+    clearBuzzTimer();
+    setActiveCard(null);
+    setBuzzWindow(0);
+  }, [stopAudio, clearBuzzTimer]);
+
+  const startBuzzTimer = useCallback(() => {
+    clearBuzzTimer();
+    setBuzzWindow(BUZZ_WINDOW);
+    buzzTimerRef.current = setInterval(() => {
+      setBuzzWindow(prev => {
+        if (prev <= 1) {
+          clearInterval(buzzTimerRef.current);
+          buzzTimerRef.current = null;
+          stopAudio();
+          setActiveCard(null);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [clearBuzzTimer, stopAudio]);
+
+  const handleCardClick = useCallback(async (charId) => {
+    if (matched[charId]) return;
+    // If a different card is active, ignore the tap
+    if (activeCard !== null && activeCard !== charId) return;
+
+    if (!started) setStarted(true);
+    setApiError(null);
+
     const character = CHARACTERS.find(c => c.id === charId);
     if (!character) return;
-    const idx = phraseIndex[charId] ?? 0;
-    const phrase = character.phrases[idx % character.phrases.length];
-    setPhraseIndex(p => ({ ...p, [charId]: idx + 1 }));
-    setPlaying(charId);
-    setApiError(null);
+
+    setActiveCard(charId);
+    startBuzzTimer();
+    stopAudio();
+
     try {
-      if (audioRef.current) { audioRef.current.pause(); URL.revokeObjectURL(audioRef.current.src); audioRef.current = null; }
-      const url = await fetchAudio(phrase, character.voiceId, character.emotion, character.speed);
+      const url = await fetchAudio(character.phrases[0], character.voiceId, character.emotion, character.speed);
       const audio = new Audio(url);
       audioRef.current = audio;
       audio.play();
-      audio.onended = () => { setPlaying(null); URL.revokeObjectURL(url); };
-      audio.onerror = () => setPlaying(null);
+      audio.onended = () => { audioRef.current = null; };
     } catch (err) {
       setApiError(err.message);
-      setPlaying(null);
+      resetListening();
     }
-  }, [playing, phraseIndex]);
+  }, [matched, activeCard, started, stopAudio, startBuzzTimer, resetListening]);
 
-  const handleCardClick = useCallback((charId) => {
-    if (playing || matched[charId]) return;
-    if (!started) setStarted(true);
-    setSelectedCard(prev => prev === charId ? null : charId);
-    playCard(charId);
-  }, [playing, matched, started, playCard]);
-
-  const handleNameClick = useCallback((charId) => {
-    if (matched[charId]) return;
-    setSelectedName(prev => prev === charId ? null : charId);
-  }, [matched]);
-
-  useEffect(() => {
-    if (selectedCard === null || selectedName === null) return;
-    const isCorrect = selectedCard === selectedName;
-    const character = CHARACTERS.find(c => c.id === selectedCard);
+  const handleNameClick = useCallback((nameId) => {
+    if (!activeCard || matched[nameId]) return;
+    const isCorrect = activeCard === nameId;
+    const character = CHARACTERS.find(c => c.id === activeCard);
+    const cardId = activeCard;
+    resetListening();
     if (feedbackRef.current) clearTimeout(feedbackRef.current);
     if (isCorrect) {
-      setMatched(m => ({ ...m, [selectedCard]: true }));
-      setRevealed(r => ({ ...r, [selectedCard]: true }));
+      setMatched(m => ({ ...m, [cardId]: true }));
+      setRevealed(r => ({ ...r, [cardId]: true }));
       setFeedback({ type: "correct", msg: `✓ ${character.name}!` });
     } else {
       setWrongGuesses(w => w + 1);
-      setFeedback({ type: "wrong", msg: `+${WRONG_PENALTY} seconds ⚡` });
+      setShakingCard(cardId);
+      setFeedback({ type: "wrong", msg: `+${WRONG_PENALTY} seconds` });
+      setTimeout(() => setShakingCard(null), 500);
     }
-    setSelectedCard(null);
-    setSelectedName(null);
-    feedbackRef.current = setTimeout(() => setFeedback(null), 1800);
-  }, [selectedCard, selectedName]);
+    feedbackRef.current = setTimeout(() => setFeedback(null), 1600);
+  }, [activeCard, matched, resetListening]);
 
-  const handleReset = (newSize) => {
+  const handleReset = useCallback((newSize) => {
     const size = newSize ?? gridSize;
     if (newSize) setGridSize(newSize);
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-    clearInterval(timerRef.current);
+    resetListening();
+    clearInterval(gameTimerRef.current);
     if (feedbackRef.current) clearTimeout(feedbackRef.current);
     setCards(shuffle(CHARACTERS).slice(0, size));
-    setRevealed({}); setPlaying(null); setSelectedCard(null); setSelectedName(null);
-    setMatched({}); setWrongGuesses(0); setElapsed(0); setStarted(false);
-    setFinished(false); setFeedback(null); setPhraseIndex({}); setApiError(null);
-  };
+    setMatched({}); setRevealed({}); setShakingCard(null); setFeedback(null);
+    setWrongGuesses(0); setElapsed(0); setStarted(false); setFinished(false); setApiError(null);
+  }, [gridSize, resetListening]);
 
-  const score = elapsed + wrongGuesses * WRONG_PENALTY;
-  const matchedCount = Object.keys(matched).length;
+  const buzzFill = activeCard ? (buzzWindow / BUZZ_WINDOW) * 100 : 0;
 
   return (
     <>
@@ -150,38 +178,18 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      {/* HEADER */}
-      <div className="header">
-        <div>
-          <div className="logo-name">🎭 Sonic Suspect</div>
-          <div className="logo-sub">powered by <a href="https://cartesia.ai" target="_blank" rel="noreferrer">Cartesia Sonic‑3</a></div>
-        </div>
-        <div className="header-right">
-          {[
-            { lbl: "TIME",  val: fmt(elapsed),     color: "#0891B2", cls: "stat stat-time" },
-            { lbl: "WRONG", val: wrongGuesses, sub: `×${WRONG_PENALTY}s`, color: "var(--wrong)", cls: "stat stat-wrong" },
-            { lbl: "SCORE", val: fmt(score),        color: "var(--amber)", cls: "stat" },
-            { lbl: "FOUND", val: matchedCount, sub: `/${cards.length}`,   color: "var(--correct)", cls: "stat" },
-          ].map(({ lbl, val, sub, color, cls }) => (
-            <div key={lbl} className={cls}>
-              <div className="stat-lbl">{lbl}</div>
-              <div className="stat-val" style={{ color }}>
-                {val}{sub && <span className="stat-sub">{sub}</span>}
-              </div>
-            </div>
-          ))}
-          <button className="reset-btn" onClick={() => handleReset()}>↺ Reset</button>
-        </div>
-      </div>
+      <Header
+        elapsed={elapsed} wrongGuesses={wrongGuesses} penalty={WRONG_PENALTY}
+        cards={cards} matched={matched} onReset={() => handleReset()}
+      />
 
       <div className="content-area">
         {apiError && (
           <div className="api-error">
             <span>⚠ {apiError}</span>
-            <button onClick={() => setApiError(null)} style={{ background: "none", border: "none", color: "var(--wrong)", cursor: "pointer", fontSize: 18 }}>×</button>
+            <button onClick={() => setApiError(null)} style={{ background:"none",border:"none",color:"var(--wrong)",cursor:"pointer",fontSize:18 }}>×</button>
           </div>
         )}
-
         {feedback && <div className={`toast ${feedback.type}`}>{feedback.msg}</div>}
 
         <GridSizeSelector gridSize={gridSize} onSelect={(size) => handleReset(size)} />
@@ -194,9 +202,10 @@ export default function Home() {
                 character={character}
                 colorIndex={i}
                 isRevealed={!!revealed[character.id]}
-                isPlaying={playing === character.id}
-                isSelected={selectedCard === character.id}
-                isMatched={!!matched[character.id]}
+                isActive={activeCard === character.id}
+                isDisabled={activeCard !== null && activeCard !== character.id && !revealed[character.id]}
+                isShaking={shakingCard === character.id}
+                buzzFill={activeCard === character.id ? buzzFill : 0}
                 onClick={() => handleCardClick(character.id)}
               />
             ))}
@@ -204,8 +213,7 @@ export default function Home() {
           <NamePanel
             characters={nameList}
             matched={matched}
-            selectedName={selectedName}
-            selectedCard={selectedCard}
+            activeCard={activeCard}
             onNameClick={handleNameClick}
           />
         </div>

@@ -1,7 +1,6 @@
 const COLORS = ["card-color-0","card-color-1","card-color-2","card-color-3","card-color-4"];
 
-export default function Card({ character, isRevealed, isPlaying, isSelected, isMatched, onClick, colorIndex }) {
-  // Revealed — show character emoji + name, matching the name panel
+export default function Card({ character, isRevealed, isActive, isDisabled, isShaking, buzzFill, onClick, colorIndex }) {
   if (isRevealed) {
     return (
       <div style={{ width: "100%" }}>
@@ -14,27 +13,35 @@ export default function Card({ character, isRevealed, isPlaying, isSelected, isM
   }
 
   const color = COLORS[colorIndex % 5];
-  const state = isPlaying ? "playing" : isSelected ? "selected" : "";
+  const stateClass = isActive ? "active" : isDisabled ? "disabled" : "";
+  const shakeClass = isShaking ? "shake" : "";
 
   return (
-    <div style={{ width: "100%", cursor: isMatched ? "default" : "pointer" }}
-      onClick={isMatched ? undefined : onClick}>
-      <div className={`card-face ${color} ${state}`}>
-        {isPlaying ? (
-          <div className="soundbars">
-            {[10,20,14,24,12].map((h, i) => (
-              <div key={i} className="bar" style={{ height: h, animationDelay: `${i * 0.08}s` }} />
-            ))}
-          </div>
-        ) : isSelected ? (
+    <div
+      style={{ width: "100%", cursor: isDisabled ? "default" : "pointer" }}
+      onClick={isDisabled ? undefined : onClick}
+    >
+      <div className={`card-face ${color} ${stateClass} ${shakeClass}`}>
+        {isActive ? (
           <>
-            <div className="card-emoji" style={{ opacity: 0.35 }}>🎧</div>
+            <div className="soundbars">
+              {[10,20,14,24,12].map((h, i) => (
+                <div key={i} className="bar" style={{ height: h, animationDelay: `${i * 0.08}s` }} />
+              ))}
+            </div>
             <div className="card-hint-pick">Pick a name →</div>
+            {/* Buzz window progress bar */}
+            <div className="buzz-bar-track">
+              <div
+                className="buzz-bar-fill"
+                style={{ width: `${buzzFill}%`, transition: buzzFill < 100 ? "width 1s linear" : "none" }}
+              />
+            </div>
           </>
         ) : (
           <>
-            <div className="card-emoji" style={{ opacity: 0.35 }}>🎧</div>
-            <div className="card-hint">Tap to hear</div>
+            <div className="card-emoji" style={{ opacity: isDisabled ? 0.2 : 0.35 }}>🎧</div>
+            <div className="card-hint" style={{ opacity: isDisabled ? 0.3 : 1 }}>Tap to hear</div>
           </>
         )}
       </div>
