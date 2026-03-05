@@ -4,6 +4,11 @@ import { CHARACTERS } from "../lib/characters";
 
 const WRONG_PENALTY = 10;
 const CARD_COLORS = ["card-color-0","card-color-1","card-color-2","card-color-3","card-color-4","card-color-5"];
+const GRID_OPTIONS = [
+  { label: "2×2", size: 4, cols: 2 },
+  { label: "3×3", size: 9, cols: 3 },
+  { label: "4×4", size: 16, cols: 4 },
+];
 
 function shuffle(arr) {
   const a = [...arr];
@@ -87,9 +92,12 @@ function NameItem({ character, isMatched, isSelected, onClick }) {
 }
 
 export default function Home() {
+  const [gridSize, setGridSize] = useState(16);
   const [cards, setCards] = useState(CHARACTERS);
-  useEffect(() => { setCards(shuffle(CHARACTERS)); }, []);
-  const nameList = [...CHARACTERS].sort((a, b) => a.name.localeCompare(b.name));
+  useEffect(() => { setCards(shuffle(CHARACTERS).slice(0, gridSize)); }, []);
+  const activeIds = new Set(cards.map(c => c.id));
+  const nameList = [...CHARACTERS].filter(c => activeIds.has(c.id)).sort((a, b) => a.name.localeCompare(b.name));
+  const gridCols = GRID_OPTIONS.find(o => o.size === gridSize)?.cols ?? 4;
 
   const [revealed, setRevealed]         = useState({});
   const [playing, setPlaying]           = useState(null);
@@ -116,11 +124,11 @@ export default function Home() {
   }, [started, finished]);
 
   useEffect(() => {
-    if (started && Object.keys(matched).length === CHARACTERS.length) {
+    if (started && Object.keys(matched).length === gridSize) {
       setFinished(true);
       clearInterval(timerRef.current);
     }
-  }, [matched, started]);
+  }, [matched, started, gridSize]);
 
   const playCard = useCallback(async (charId) => {
     if (playing) return;
@@ -180,11 +188,13 @@ export default function Home() {
     feedbackRef.current = setTimeout(() => setFeedback(null), 1600);
   }, [selectedCard, selectedName]);
 
-  const handleReset = () => {
+  const handleReset = (newSize) => {
+    const size = newSize ?? gridSize;
+    if (newSize) setGridSize(newSize);
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     clearInterval(timerRef.current);
     if (feedbackRef.current) clearTimeout(feedbackRef.current);
-    setCards(shuffle(CHARACTERS));
+    setCards(shuffle(CHARACTERS).slice(0, size));
     setRevealed({}); setPlaying(null); setSelectedCard(null); setSelectedName(null);
     setMatched({}); setWrongGuesses(0); setElapsed(0); setStarted(false);
     setFinished(false); setFeedback(null); setPhraseIndex({}); setApiError(null);
@@ -212,7 +222,7 @@ export default function Home() {
             { label: "TIME",  value: formatTime(elapsed), color: "#60CFFF" },
             { label: "WRONG", value: wrongGuesses, sub: `×${WRONG_PENALTY}s`, color: "#FF6B6B" },
             { label: "SCORE", value: formatTime(score), color: "#FFBF00" },
-            { label: "FOUND", value: `${matchedCount}`, sub: "/16", color: "#06D6A0" },
+            { label: "FOUND", value: `${matchedCount}`, sub: `/${gridSize}`, color: "#06D6A0" },
           ].map(({ label, value, sub, color }) => (
             <div key={label} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 50, padding: "5px 14px", textAlign: "center", minWidth: 72 }}>
               <div style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 800 }}>{label}</div>
@@ -221,8 +231,26 @@ export default function Home() {
               </div>
             </div>
           ))}
-          <button className="reset-btn" onClick={handleReset}>↺ Reset</button>
+          <button className="reset-btn" onClick={() => handleReset()}>↺ Reset</button>
         </div>
+      </div>
+
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "8px 20px 0", display: "flex", gap: 6 }}>
+        {GRID_OPTIONS.map(({ label, size }) => (
+          <button
+            key={size}
+            onClick={() => handleReset(size)}
+            style={{
+              background: gridSize === size ? "#FFBF00" : "rgba(255,255,255,0.08)",
+              color: gridSize === size ? "#1A1A40" : "rgba(255,255,255,0.5)",
+              border: gridSize === size ? "2px solid #FFBF00" : "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 50, padding: "5px 16px", fontSize: 13, fontWeight: 800,
+              cursor: "pointer", letterSpacing: "0.04em",
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px 40px" }}>
@@ -250,7 +278,7 @@ export default function Home() {
 
         {/* GRID + PANEL */}
         <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-          <div style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+          <div style={{ flex: 1, display: "grid", gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: 12 }}>
             {cards.map((character, i) => (
               <Card
                 key={character.id}
