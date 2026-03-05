@@ -8,7 +8,7 @@ import Onboarding from "../components/Onboarding";
 import GridSizeSelector from "../components/GridSizeSelector";
 
 const WRONG_PENALTY = 10;
-const GRID_COLS = { 4: 2, 9: 3, 16: 4 };
+const GRID_COLS = { 4: 2, 9: 3 };
 
 function shuffle(arr) {
   const a = [...arr];
@@ -37,12 +37,12 @@ async function fetchAudio(text, voiceId, emotion, speed) {
 }
 
 export default function Home() {
-  const [gridSize, setGridSize] = useState(16);
+  const [gridSize, setGridSize] = useState(9);
   const [showOnboarding, setShowOnboarding] = useState(true);
-  const [cards, setCards] = useState(CHARACTERS);
+  const [cards, setCards] = useState(CHARACTERS.slice(0, 9));
   useEffect(() => { setCards(shuffle(CHARACTERS).slice(0, gridSize)); }, []);
   const nameList = [...cards].sort((a, b) => a.name.localeCompare(b.name));
-  const gridCols = GRID_COLS[gridSize] ?? 4;
+  const gridCols = GRID_COLS[gridSize] ?? 3;
 
   const [revealed, setRevealed]         = useState({});
   const [playing, setPlaying]           = useState(null);
@@ -146,6 +146,9 @@ export default function Home() {
 
   const score = elapsed + wrongGuesses * WRONG_PENALTY;
   const matchedCount = Object.keys(matched).length;
+  const gridStyle = {
+    gridTemplateColumns: `repeat(${gridCols}, minmax(0, var(--max-card-size)))`,
+  };
 
   return (
     <>
@@ -162,15 +165,15 @@ export default function Home() {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {[
-            { label: "TIME",  value: formatTime(elapsed), color: "#60CFFF" },
-            { label: "WRONG", value: wrongGuesses, sub: `×${WRONG_PENALTY}s`, color: "#FF6B6B" },
-            { label: "SCORE", value: formatTime(score), color: "#FFBF00" },
-            { label: "FOUND", value: `${matchedCount}`, sub: `/${cards.length}`, color: "#06D6A0" },
-          ].map(({ label, value, sub, color }) => (
-            <div key={label} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 50, padding: "5px 14px", textAlign: "center", minWidth: 72 }}>
-              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 800 }}>{label}</div>
+            { label: "TIME",  value: formatTime(elapsed), color: "#60CFFF", cls: "stat-pill stat-pill-time" },
+            { label: "WRONG", value: wrongGuesses, sub: `×${WRONG_PENALTY}s`, color: "#FF6B6B", cls: "stat-pill stat-pill-wrong" },
+            { label: "SCORE", value: formatTime(score), color: "#FFBF00", cls: "stat-pill" },
+            { label: "FOUND", value: `${matchedCount}`, sub: `/${cards.length}`, color: "#22C55E", cls: "stat-pill" },
+          ].map(({ label, value, sub, color, cls }) => (
+            <div key={label} className={cls}>
+              <div className="stat-label">{label}</div>
               <div className="stat-value" style={{ color }}>
-                {value}{sub && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{sub}</span>}
+                {value}{sub && <span className="stat-sub">{sub}</span>}
               </div>
             </div>
           ))}
@@ -180,11 +183,17 @@ export default function Home() {
 
       <GridSizeSelector gridSize={gridSize} onSelect={(size) => handleReset(size)} />
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px 40px" }}>
+      <div className="content-area">
         {apiError && (
-          <div style={{ background: "#FFE8E8", border: "2px solid #FF4D4D", borderRadius: 10, padding: "10px 16px", marginBottom: 16, fontSize: 13, color: "#CC0000", display: "flex", justifyContent: "space-between" }}>
+          <div className="api-error">
             <span>⚠ {apiError}</span>
-            <button onClick={() => setApiError(null)} style={{ background: "none", border: "none", color: "#CC0000", cursor: "pointer", fontSize: 16 }}>×</button>
+            <button onClick={() => setApiError(null)} style={{ background: "none", border: "none", color: "var(--wrong)", cursor: "pointer", fontSize: 16 }}>×</button>
+          </div>
+        )}
+
+        {!started && !showOnboarding && (
+          <div className="instructions">
+            🎧 Tap a card to hear a mystery voice · Then pick the matching name · Wrong guess = +10s
           </div>
         )}
 
@@ -192,8 +201,8 @@ export default function Home() {
           <div className={`toast ${feedback.type}`}>{feedback.msg}</div>
         )}
 
-        <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-          <div style={{ flex: 1, display: "grid", gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: 12 }}>
+        <div className="main-layout">
+          <div className="card-grid" style={gridStyle}>
             {cards.map((character, i) => (
               <Card
                 key={character.id}

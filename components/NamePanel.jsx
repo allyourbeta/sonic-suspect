@@ -1,42 +1,36 @@
-function NameTag({ character, isMatched, isSelected, onClick }) {
+function NameItem({ character, isMatched, isSelected, onClick }) {
+  const cls = `name-item ${isMatched ? "matched" : ""} ${isSelected ? "selected" : ""}`;
   return (
-    <div onClick={isMatched ? undefined : onClick} style={{
-      padding: "8px 12px", borderRadius: 10,
-      background: isMatched ? "transparent" : isSelected ? "var(--card-4)" : "white",
-      border: isMatched ? "none" : isSelected ? "2px solid var(--navy)" : "2px solid transparent",
-      color: "var(--navy)",
-      fontSize: 13, fontWeight: 800,
-      cursor: isMatched ? "default" : "pointer",
-      textDecoration: isMatched ? "line-through" : "none",
-      opacity: isMatched ? 0.4 : 1,
-      transition: "all 0.15s ease",
-      display: "flex", alignItems: "center", gap: 8,
-    }}>
-      <span style={{ fontSize: 15, lineHeight: 1 }}>{character.emoji}</span>
+    <div className={cls} onClick={isMatched ? undefined : onClick}>
+      <span style={{ fontSize: 16 }}>{character.emoji}</span>
       <span style={{ flex: 1 }}>{character.name}</span>
-      {isMatched && <span style={{ color: "var(--correct)", fontSize: 13 }}>✓</span>}
+      {isMatched && <span style={{ color: "var(--correct)" }}>✓</span>}
+    </div>
+  );
+}
+
+function NameChip({ character, isMatched, isSelected, onClick }) {
+  const cls = `name-chip ${isMatched ? "matched" : ""} ${isSelected ? "selected" : ""}`;
+  return (
+    <div className={cls} onClick={isMatched ? undefined : onClick}>
+      <span>{character.emoji}</span>
+      <span>{character.name}</span>
+      {isMatched && <span style={{ color: "var(--correct)" }}>✓</span>}
     </div>
   );
 }
 
 export default function NamePanel({ characters, matched, selectedName, selectedCard, onNameClick }) {
   const urgent = selectedCard !== null;
+
   return (
-    <div style={{ width: 230, flexShrink: 0, background: "white", borderRadius: 16, overflow: "hidden", position: "sticky", top: 20, boxShadow: "0 4px 0 var(--shadow-5)" }}>
-      <div
-        className={urgent ? "name-panel-header-urgent" : ""}
-        style={{
-          background: urgent ? "var(--wrong)" : "var(--navy)",
-          padding: "10px 14px", color: "white", fontSize: 10, fontWeight: 800,
-          letterSpacing: "0.1em", textTransform: "uppercase",
-          fontFamily: "'Fredoka One', cursive",
-        }}
-      >
-        {urgent ? "\ud83d\udc47 NOW PICK A NAME" : "WHO DO YOU HEAR?"}
-      </div>
-      <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+    <>
+      <div className="name-panel-desktop">
+        <div className={`name-panel-header ${urgent ? "urgent" : ""}`}>
+          {urgent ? "👇 PICK A NAME" : "WHO DO YOU HEAR?"}
+        </div>
         {characters.map(character => (
-          <NameTag
+          <NameItem
             key={character.id}
             character={character}
             isMatched={!!matched[character.id]}
@@ -45,6 +39,18 @@ export default function NamePanel({ characters, matched, selectedName, selectedC
           />
         ))}
       </div>
-    </div>
+
+      <div className="name-panel-mobile">
+        {characters.map(character => (
+          <NameChip
+            key={character.id}
+            character={character}
+            isMatched={!!matched[character.id]}
+            isSelected={selectedName === character.id}
+            onClick={() => onNameClick(character.id)}
+          />
+        ))}
+      </div>
+    </>
   );
 }

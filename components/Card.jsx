@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { CHARACTERS } from "../lib/characters";
 
-const CARD_COLORS = ["--card-1", "--card-2", "--card-3", "--card-4", "--card-5", "--card-6"];
-const CARD_SHADOWS = ["--shadow-1", "--shadow-2", "--shadow-3", "--shadow-4", "--shadow-5", "--shadow-6"];
+const CARD_COLORS = ["card-color-0", "card-color-1", "card-color-2", "card-color-3", "card-color-4"];
 
 function AvatarImg({ name, size }) {
   const [failed, setFailed] = useState(false);
@@ -15,59 +14,48 @@ function AvatarImg({ name, size }) {
       width={size}
       height={size}
       onError={() => setFailed(true)}
-      style={{ borderRadius: "50%", display: "block" }}
+      style={{ borderRadius: "50%", display: "block", border: "2px solid var(--correct)" }}
     />
   );
 }
 
 export default function Card({ character, isRevealed, isPlaying, isSelected, isMatched, onClick, colorIndex }) {
-  const cardColor = `var(${CARD_COLORS[colorIndex % 6]})`;
-  const shadowColor = `var(${CARD_SHADOWS[colorIndex % 6]})`;
+  const colorClass = CARD_COLORS[colorIndex % 5];
+  const stateClass = isPlaying ? "playing" : isSelected ? "selected" : "";
 
   return (
-    <div onClick={onClick} style={{ width: "100%", aspectRatio: "1", cursor: isMatched ? "default" : "pointer", perspective: "600px", userSelect: "none" }}>
+    <div onClick={isMatched ? undefined : onClick} style={{ width: "100%", cursor: isMatched ? "default" : "pointer", perspective: "600px", userSelect: "none" }}>
       <div style={{
-        position: "relative", width: "100%", height: "100%",
+        position: "relative", width: "100%", aspectRatio: "1",
         transformStyle: "preserve-3d",
         transform: isRevealed ? "rotateY(180deg)" : "rotateY(0deg)",
         transition: "transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)",
       }}>
-        <div style={{
+        <div className={`card-face-down ${colorClass} ${stateClass}`} style={{
           position: "absolute", inset: 0, backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden",
-          borderRadius: 20, background: cardColor,
-          border: isSelected ? "3px solid var(--navy)" : isPlaying ? "3px solid var(--navy)" : "none",
-          display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 6,
-          boxShadow: `0 6px 0 ${shadowColor}`,
-          transition: "all 0.2s ease",
         }}>
           {isPlaying ? (
-            <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 30 }}>
+            <div className="sound-bars">
               {[14, 22, 18, 26, 16].map((h, i) => (
-                <div key={i} style={{
-                  width: 5, height: h, background: "white", borderRadius: 3,
-                  animation: `soundbar 0.5s ${i * 0.08}s ease-in-out infinite alternate`,
-                }} />
+                <div key={i} className="sound-bar" style={{ height: h, animationDelay: `${i * 0.08}s` }} />
               ))}
             </div>
+          ) : isSelected ? (
+            <div className="card-label">pick a name →</div>
           ) : (
             <>
-              <div style={{ fontSize: 28, opacity: 0.9 }}>🎭</div>
-              <div style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.85 }}>
-                {isSelected ? "pick a name →" : "tap to hear"}
-              </div>
+              <div style={{ fontSize: 28, opacity: 0.4 }}>🎭</div>
+              <div className="card-label">tap to hear</div>
             </>
           )}
         </div>
 
-        <div style={{
+        <div className="card-revealed" style={{
           position: "absolute", inset: 0, backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden",
-          transform: "rotateY(180deg)", borderRadius: 20,
-          background: "white", border: "3px solid var(--correct)",
-          display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 6,
-          boxShadow: "0 6px 0 var(--shadow-3)",
+          transform: "rotateY(180deg)",
         }}>
           <AvatarImg name={character.name} size={52} />
-          <div style={{ color: "var(--navy)", fontSize: 10, fontWeight: 800, textAlign: "center", padding: "0 6px", lineHeight: 1.3, letterSpacing: "0.03em" }}>
+          <div style={{ color: "var(--text)", fontSize: 11, fontWeight: 700, textAlign: "center", padding: "0 8px", lineHeight: 1.3 }}>
             {character.name.replace("The ", "")}
           </div>
         </div>
